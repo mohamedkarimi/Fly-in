@@ -77,6 +77,7 @@ class MapParser:
                 self._error("Multiple start_hub declarations are not allowed.")
             if graph.has_zone(zone.name):
                 self._error(f"Duplicate zone name: {zone.name}.")
+            self._validate_unique_zone_coordinates(zone, graph)
             graph.add_zone(zone)
             return
 
@@ -86,6 +87,7 @@ class MapParser:
                 self._error("Multiple end_hub declarations are not allowed.")
             if graph.has_zone(zone.name):
                 self._error(f"Duplicate zone name: {zone.name}.")
+            self._validate_unique_zone_coordinates(zone, graph)
             graph.add_zone(zone)
             return
 
@@ -93,6 +95,7 @@ class MapParser:
             zone = self._parse_zone(line[len("hub:"):].strip(), "hub")
             if graph.has_zone(zone.name):
                 self._error(f"Duplicate zone name: {zone.name}.")
+            self._validate_unique_zone_coordinates(zone, graph)
             graph.add_zone(zone)
             return
 
@@ -272,6 +275,17 @@ class MapParser:
             self._error("Zone names may not contain spaces or dashes.")
         if not name:
             self._error("Zone name may not be empty.")
+
+    def _validate_unique_zone_coordinates(self, zone: Zone, graph: Graph) -> None:
+        """Reject zone declarations that reuse an existing coordinate pair."""
+        for existing_zone in graph.zones.values():
+            if (existing_zone.x, existing_zone.y) != (zone.x, zone.y):
+                continue
+            self._error(
+                'Duplicate coordinates '
+                f'({zone.x}, {zone.y}): zones "{existing_zone.name}" '
+                f'and "{zone.name}".'
+            )
 
     def _parse_zone_type(self, raw_value: str) -> ZoneType:
         """Parse and validate one zone type value."""

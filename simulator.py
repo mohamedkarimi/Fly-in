@@ -202,6 +202,10 @@ class Simulator:
         link_usage = self._build_link_usage()
         planned_moves = self._plan_moves()
         self._apply_moves(planned_moves, occupancy, link_usage, turn_moves)
+        # DEBUG DISPLAY (temporary)
+        # Uncomment this line during development.
+        #import display
+        #display.render(self)
 
         return turn_moves
 
