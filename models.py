@@ -38,10 +38,6 @@ class Zone:
         """Return whether drones may enter this zone."""
         return self.zone_type is not ZoneType.BLOCKED
 
-    # def has_unlimited_capacity(self) -> bool:
-    #     """Return whether this zone may hold any number of drones."""
-    #     return self.is_start or self.is_end
-
 
 @dataclass(slots=True)
 class Connection:
@@ -51,24 +47,6 @@ class Connection:
     zone_b: str
     max_link_capacity: int
     name: str
-
-    # def connects(self, zone_name: str) -> bool:
-    #     """Return whether the connection touches the given zone."""
-    #     return zone_name == self.zone_a or zone_name == self.zone_b
-
-    # def other_end(self, zone_name: str) -> str:
-    #     """Return the opposite endpoint of the given zone."""
-    #     if zone_name == self.zone_a:
-    #         return self.zone_b
-    #     if zone_name == self.zone_b:
-    #         return self.zone_a
-    #     raise ValueError(
-    #         f"Zone {zone_name!r} is not part of connection {self.name!r}."
-    #     )
-
-    # def matches(self, zone_a: str, zone_b: str) -> bool:
-    #     """Return whether this connection links the two given zones."""
-    #     return {self.zone_a, self.zone_b} == {zone_a, zone_b}
 
 
 @dataclass(slots=True)
@@ -143,3 +121,16 @@ class Drone:
     def label(self) -> str:
         """Return the printable drone identifier."""
         return f"D{self.drone_id}"
+
+
+@dataclass(slots=True, frozen=True)
+class SimulationMove:
+    """Represent one rendered movement token for a simulation turn."""
+
+    drone_label: str
+    target: str
+    destination_zone: str | None = None
+
+    def token(self) -> str:
+        """Return the plain-text movement token."""
+        return f"{self.drone_label}-{self.target}"

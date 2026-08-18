@@ -86,10 +86,6 @@ class Pathfinder:
         """Return ordered candidate next hops toward the end zone."""
         return list(self.next_hops.get(zone_name, []))
 
-    # def distance_from(self, zone_name: str) -> int | None:
-    #     """Return the shortest distance from the zone to the end zone."""
-    #     return self.distances_to_end.get(zone_name)
-
-    # def is_reachable_from(self, zone_name: str) -> bool:
-    #     """Return whether the end zone is reachable from the given zone."""
-    #     return zone_name in self.distances_to_end
+    def distance_from(self, zone_name: str) -> int | None:
+        """Return the cached shortest distance to the end zone."""
+        return self.distances_to_end.get(zone_name)

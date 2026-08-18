@@ -30,8 +30,9 @@ def main() -> int:
     simulator.initialize_drones(drone_count)
     history = simulator.run()
 
-    output = Visualizer().format(history)
+    output = Visualizer(graph).format(history)
     print(output)
+    print(f"Simulation finished in {simulator.turn_number} turns.")
     return 0
 
 
