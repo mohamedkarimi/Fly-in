@@ -205,6 +205,10 @@ class MapParser:
         zone_type = self._parse_zone_type(
             metadata.get("zone", ZoneType.NORMAL.value)
         )
+        if zone_type is ZoneType.BLOCKED and zone_role in ("start", "end"):
+            self._error(
+                f"{zone_role}_hub cannot have zone=blocked."
+            )
         color = metadata.get("color")
 
         allowed_keys = {"zone", "color", "max_drones"}

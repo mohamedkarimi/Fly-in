@@ -26,9 +26,24 @@ def main() -> int:
     pathfinder = Pathfinder(graph)
     pathfinder.compute()
 
+    if graph.start_zone is None:
+        print("Error: missing start zone.", file=sys.stderr)
+        return 1
+
+    if pathfinder.distance_from(graph.start_zone) is None:
+        print(
+            "Error: no valid path from start zone to end zone.",
+            file=sys.stderr,
+        )
+        return 1
+
     simulator = Simulator(graph, pathfinder)
-    simulator.initialize_drones(drone_count)
-    history = simulator.run()
+    try:
+        simulator.initialize_drones(drone_count)
+        history = simulator.run()
+    except KeyboardInterrupt:
+        print("\nSimulation interrupted by user.", file=sys.stderr)
+        return 130
 
     output = Visualizer(graph).format(history)
     print(output)
