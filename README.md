@@ -60,13 +60,13 @@ At the start of each turn, drones already travelling to restricted zones advance
 
 For each ready drone, the simulator selects the first feasible shortest-path hop. While planning the turn, it reserves the destination occupancy and the connection usage, so later planned moves see the earlier reservations. A drone waits when no such hop has both available zone and connection capacity. This is the implementation's conflict resolution: there is no backtracking, random selection, or global re-optimization.
 
-Non-terminal hubs default to capacity 1 unless `max_drones` is supplied. The start and end hubs are unlimited. A connection defaults to capacity 1 unless `max_link_capacity` is supplied; connection usage is shared in both directions. Drones in restricted transit count against their connection's capacity until they arrive. The implementation reserves a restricted destination during its launch turn, but a drone in transit is not included in zone occupancy on later turns; on arrival it is added to occupancy before new moves are planned.
+Non-terminal hubs default to capacity 1 unless `max_drones` is supplied. The start and end hubs are unlimited. A connection defaults to capacity 1 unless `max_link_capacity` is supplied; connection usage is shared in both directions. Drones in restricted transit count against their connection's capacity until they arrive, and reserve a slot in their destination zone for the full transit so they can never wait on the connection for capacity.
 
 ## Simulation and Movement Rules
 
 - Every drone begins in the start hub. Normal and priority destinations are reached in the same simulated turn in which their move is applied.
 - Entering a blocked zone is disallowed by the pathfinder.
-- Entering a restricted zone starts transit with two remaining advances. The launch is rendered with the connection name; each later advance is internal to the simulator, and arrival is not rendered as a separate movement token.
+- Entering a restricted zone uses two turns: the launch onto its connection, then arrival on the following turn. The launch is rendered with the connection name. When transit completes, the drone's arrival at the restricted zone is rendered as a movement token; it cannot take another hop until the next turn.
 - Drones physically present in ordinary hubs are counted for occupancy. The start and end hubs do not impose an occupancy limit.
 - A drone moved to the end hub is immediately marked delivered and is not considered in later turns.
 - The simulation ends after all drones are delivered. If an entire turn makes no move and advances no restricted transit, it stops with `Simulation stalled before all drones reached the end zone.`

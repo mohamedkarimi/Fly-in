@@ -83,7 +83,9 @@ class Simulator:
 
         return None
 
-    def _iter_ready_drones(self) -> list[Drone]:
+    def _iter_ready_drones(
+        self, arrived_this_turn: set[int] | None = None
+    ) -> list[Drone]:
         """Return drones ready to move in downstream-first order.
 
         Scheduling zones that are closer to the end first lets drones vacate
@@ -91,12 +93,14 @@ class Simulator:
         subject rule that departures free capacity for arrivals in the same
         turn.
         """
+        arrived_this_turn = arrived_this_turn or set()
         ready_drones = [
             drone
             for drone in self.drones
             if not drone.delivered
             and not drone.in_transit
             and drone.current_zone is not None
+            and drone.drone_id not in arrived_this_turn
         ]
         if not ready_drones:
             return []
@@ -119,11 +123,12 @@ class Simulator:
         self,
         occupancy: dict[str, int],
         link_usage: dict[str, int],
+        arrived_this_turn: set[int] | None = None,
     ) -> list[tuple[Drone, str]]:
         """Build a movement plan while reserving zone and link capacity."""
         planned_moves: list[tuple[Drone, str]] = []
 
-        for drone in self._iter_ready_drones():
+        for drone in self._iter_ready_drones(arrived_this_turn):
             source = drone.current_zone
             if source is None:
                 continue
@@ -211,7 +216,9 @@ class Simulator:
                 drone.start_transit(
                     connection.name,
                     destination,
-                    destination_zone.movement_cost(),
+                    # Launching onto the connection is the first turn of
+                    # this movement. The remaining turn reaches the zone.
+                    destination_zone.movement_cost() - 1,
                 )
                 turn_moves.append(
                     SimulationMove(
@@ -234,25 +241,33 @@ class Simulator:
             )
 
     def _build_occupancy(self) -> dict[str, int]:
-        """Count drones currently present in each zone."""
+        """counts how many drones are currently inside each zone."""
         occupancy: dict[str, int] = {}
 
         for drone in self.drones:
-            if (
-                drone.delivered
-                or drone.in_transit
-                or drone.current_zone is None
-            ):
+            if drone.delivered:
                 continue
 
-            zone_name = drone.current_zone
+            # A restricted-zone traveller reserves a destination slot for
+            # the whole transit. This guarantees it can arrive on schedule
+            # instead of waiting on the connection for capacity to open.
+            zone_name = (
+                drone.transit_destination
+                if drone.in_transit
+                else drone.current_zone
+            )
+            if zone_name is None:
+                continue
             occupancy[zone_name] = occupancy.get(zone_name, 0) + 1
 
         return occupancy
 
-    def _advance_transit_drones(self) -> bool:
-        """Advance in-flight drones and report if transit progressed."""
+    def _advance_transit_drones(
+        self, turn_moves: list[SimulationMove]
+    ) -> tuple[bool, set[int]]:
+        """Advance in-flight drones and record completed arrivals."""
         progressed = False
+        arrived_this_turn: set[int] = set()
 
         for drone in self.drones:
             if not drone.in_transit:
@@ -263,19 +278,31 @@ class Simulator:
                 continue
 
             destination = drone.arrive()
+            arrived_this_turn.add(drone.drone_id)
+            turn_moves.append(
+                SimulationMove(
+                    drone_label=drone.label(),
+                    target=destination,
+                    destination_zone=destination,
+                )
+            )
             if destination == self.graph.end_zone:
                 drone.mark_delivered()
 
-        return progressed
+        return progressed, arrived_this_turn
 
     def run_turn(self) -> list[SimulationMove]:
         """Execute one simulation turn and return its movement tokens."""
         self.turn_number += 1
         turn_moves: list[SimulationMove] = []
-        progressed_in_transit = self._advance_transit_drones()
+        progressed_in_transit, arrived_this_turn = (
+            self._advance_transit_drones(turn_moves)
+        )
         occupancy = self._build_occupancy()
         link_usage = self._build_link_usage()
-        planned_moves = self._plan_moves(occupancy, link_usage)
+        planned_moves = self._plan_moves(
+            occupancy, link_usage, arrived_this_turn
+        )
         self._apply_moves(planned_moves, turn_moves)
         self._last_turn_made_progress = (
             progressed_in_transit or bool(turn_moves)
